@@ -1,0 +1,63 @@
+# Infrastructure Automation: CI/CD Pipeline Automation Engine Configuration
+**Path:** `.github/workflows/psscriptanalyzer-validation.yml`  
+**Deployment Context:** Evaluates every pull request Targeting `staging` or `main` inside the GitHub central clinical repository.
+
+## 1. Functional Purpose
+This workflow configures a automated cloud runner container layer. Whenever a developer modifications code branches or submits a pull request, the runner isolates the code blocks, initializes the `PSScriptAnalyzer` test framework module, and tests the script for syntax errors, unhandled variables, or unsafe commands before authorization is granted to merge code into production hospital directories.
+
+## 2. Core YAML Pipeline Code Execution
+```yaml
+name: VirusTC Code Quality & Syntax Linting Verification
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+    paths:
+      - 'scripts/**.ps1'
+      - 'scripts/**.psm1'
+
+jobs:
+  powershell-lint:
+    name: Execute PSScriptAnalyzer Automated Tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Step 1 - Check Out Target Source Code Repository Base
+        uses: actions/checkout@v4
+
+      - name: Step 2 - Initialize Local Node PowerShell Module Caching Layer
+        uses: actions/cache@v4
+        with:
+          path: ~\Documents\PowerShell\Modules
+          key: \${{ runner.os }}-powershell-modules
+
+      - name: Step 3 - Force Install Dependencies (PSScriptAnalyzer Engine)
+        shell: powershell
+        run: |
+          if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
+              Write-Output "Module missing from cached environment layers. Running forced installation..."
+              Install-Module -Name PSScriptAnalyzer -Force -AllowClobber -Scope CurrentUser
+          }
+
+      - name: Step 4 - Execute Static Deep Code Analysis & Parse Validation Errors
+        shell: powershell
+        run: |
+          Write-Output "Starting inline analysis validation run for all repository script components..."
+          \$AnalysisResults = Invoke-ScriptAnalyzer -Path .\scripts\ -Recurse -Severity Error, Warning
+          
+          if (null -ne AnalysisResults) {
+              Write-Output "========================================================================"
+              Write-Host "CRITICAL QUALITY PROBLEMS / SYNTAX ERRORS DETECTED INSIDE TARGET BRANCH" -ForegroundColor Red
+              Write-Output "========================================================================"
+              \$AnalysisResults | Format-Table -Property ScriptName, Line, Message, Severity
+              
+              # Hard break execution pass to prevent broken merge configurations
+              exit 1
+          } else {
+              Write-Output "========================================================================"
+              Write-Host "SUCCESS: All script code passes standard VirusTC enterprise health requirements." -ForegroundColor Green
+              Write-Output "========================================================================"
+          }
+```
