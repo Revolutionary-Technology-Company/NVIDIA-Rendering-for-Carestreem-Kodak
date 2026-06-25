@@ -85,11 +85,38 @@ if (Test-Path $NvidiaSmi) {
         $RemediationLog += "[REPAIR] NVIDIA Persistence Mode was Disabled. Re-activating driver persistence."
         Start-Process -FilePath $NvidiaSmi -ArgumentList "-pm 1" -NoNewWindow -Wait
         Start-Process -FilePath $NvidiaSmi -ArgumentList "-g 0 -acp P0" -NoNewWindow -Wait
+        $CurrentStatus = "Healed"
+        $CurrentEventID = 40661
+    } else {
+        # The card is already healthy and in P0 performance state
+        if (-not $DriftDetected) {
+            $CurrentStatus = "Compliant"
+            $CurrentEventID = 40662
+            $RemediationLog += "NVIDIA hardware profile is fully optimal."
+        }
     }
 } else {
     $DriftDetected = $true
+    $CurrentStatus = "Drifted"
+    $CurrentEventID = 40660
     $RemediationLog += "[CRITICAL CRASH] NVIDIA-SMI utility missing. Local ASUS TUF graphics driver requires immediate IT reinstall."
 }
+
+# ============================================================================
+# CENTRALIZED API DISPATCH (Executed globally at the end of the script)
+# ============================================================================
+$BodyJson = @{
+    AuthToken      = "VTC-ASUS-RTX50-SECURE-HANDSHAKE-TOKEN-2026"
+    WorkstationID  = $WorkstationID
+    GpuHardware    = "ASUS TUF RTX 5080" 
+    EventID        = $CurrentEventID
+    Status         = $CurrentStatus
+    LogDetails     = ($RemediationLog -join " | ")
+} | ConvertTo-Json
+
+# Send payload securely to network storage node listener
+Invoke-RestMethod -Uri "https://hospital.local" -Method Post -Body $BodyJson -ContentType "application/json"
+
 
 # ============================================================================
 # AUDIT SUBMISSION & POST-REPAIR REPORTING
