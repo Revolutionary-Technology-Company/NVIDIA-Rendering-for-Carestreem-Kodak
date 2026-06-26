@@ -85,3 +85,28 @@ Place this file on your Domain Controller inside `C:\Windows\PolicyDefinitions\e
 3.  Create or Edit your existing workstation optimization GPO.
 4.  Navigate to: `Computer Configuration` ➔ `Policies` ➔ `Administrative Templates` ➔ `Clinical Imaging Pipeline Stability`.
 5.  Toggle all three settings to Enabled to enforce active baseline alignment.
+
+
+Active Directory GPO WMI Filter Query
+-----------------------------------------
+
+To prevent this local script from executing on virtual machines or base office computers without the target physical hardware, link a WMI Filter to the target Group Policy Object.
+
+1.  Open Group Policy Management (`gpmc.msc`).
+2.  Right-click WMI Filters in the console tree and select New.
+3.  Name the filter: `Filter_Physical_ASUS_NVIDIA_Workstations`.
+4.  Set the Namespace to: `root\CIMV2`
+5.  Enter the following structured WMI query:
+
+```
+SELECT * FROM Win32_VideoController WHERE Name LIKE "%NVIDIA%" OR Name LIKE "%ASUS%"
+
+```
+
+How it evaluates:
+-----------------
+
+-   True State: Workstations with physical NVIDIA RTX 50 or ASUS TUF-manufactured display controller drivers will validate the query, forcing Active Directory to run `Local-TUF-Endpoint-Opt.ps1` at computer startup.
+-   False State: Citrix Virtual Delivery Agents (VDAs) or general administrative laptops lacking dedicated ASUS/NVIDIA controllers will drop execution, preventing unnecessary script processing.
+
+* * * * *
