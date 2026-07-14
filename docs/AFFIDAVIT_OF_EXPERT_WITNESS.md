@@ -1,4 +1,5 @@
 AFFIDAVIT OF EXPERT WITNESS
+---------------------------
 
 COURT OF RECORD: [Insert Name of Court, e.g., United States District Court]\
 CASE NO: [Insert Case/Docket Number]
